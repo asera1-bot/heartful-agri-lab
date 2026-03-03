@@ -64,3 +64,46 @@ def main():
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
     # 正規化
+    df["company"] = df["company"].apply(norm_company)
+    df["tier"] = df["tier"].apply(norm_tier)
+    df["house"] = df["house"].apply(norm_house)
+
+    # 品種列が存在するか
+    for c in VARIETY_COLS:
+        if c not in df.columns:
+            df[c] = pd.NA # 無い列は空で追加（落ちないように）
+
+    # wide -> Long
+    long = df.melt(
+        id_vars=["date", "company", "tier", "house"],
+        value_vars=VARIETY_COLS,
+        var_name="variety",
+        value_name="amount_g",
+    )
+
+    long["variety"] = long["variety"].apply(norm_text)
+    long["amount_g"] = pd.to_numeric(long["amount_g"], errors="coerce")
+
+    # 値がない行を落とす
+    long = long.dropna(subset=["date", "company", "tier", "house", "variety", "amount_g"])
+
+    # 0やマイナスは帳票エラーの可能性が高いので落とす（必要なら緩める）
+    long = long[long["amount_g"] > 0].copy()
+
+    # kg変換
+    long["amount_kg"] = long["amount_g"] / 1000.0
+    long["month"] = long["date"].dt.to_period("M").astype(str)
+
+    # 構造ラベル
+    long["structure"] = long["house"].apply(lambda x: "3-tier（実験棟）" if x == "実験棟" else "1-tier（企業棟)")
+
+    # 外乱（屋根破損：かおり野の1月がほぼ０）
+    long["damage_period"] = (long["date"] >= "2026-01-01") & (long["date"] <= 2026-01-31")
+
+    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
+    long.to_csv(OUT_CSV, index=False)
+    print(f"saved: {OUT_CSV} rows={len(long)}")
+    print(long.head(10))
+
+if __name__ == "__main__":
+    main()

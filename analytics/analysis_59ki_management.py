@@ -1,101 +1,53 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# ======================
-# 1. LOAD
-# ======================
-
-# Excelデータでは別名なのでCSVデータに変換して名前を以下に揃えること
-df = pd.read_csv("strawberry_59_yield_tier_clean.csv")
-
+df = pd.read_csv("datesets/59ki_master_long.csv")
 df["date"] = pd.to_datetime(df["date"])
-df["month"] = df["date"].dt.to_period("M")
 
-# kg変換
-df["amount_kg"] = df["amount_g"] / 1000
-
-# ======================
-# 2.構造分類（最重要）
-# ======================
-df["structure"] = df["house"].apply(
-    lambda x: "3-tier（実験棟）" if x == "実験棟" else "1-tier（企業棟）"
-)
-
-# ======================
-# 3.外乱期間（屋根破損）
-# ======================
-df["damage_period"] = (
-    (df["date"] >= "2026-01-01") &
-    (df["date"] <= "2026-01-31")
-)
-
-# =====================
-# FIG1 構造比較（★核心）
-# =====================
+# 図1：構造別総収量（投資判断の核）
 plt.figure()
-df.groupby("structure")["amount_kg"].sum().plot(kind="bar")
-plt.ylabel("Total Yield (kg)")
-plt.title("Yield Comparison: Multi-tier vs Single-tier")
+df.gruopby("structure")["amount_kg"].sum().plot(kind="bar")
+plt.ylbel("Total Yield(kg)")
+plt.title("Yield: 3-tier(実験棟) vs 1-tier(企業棟)")
 plt.tight_layout()
-plt.savefig("fig1_structure_comparison.png")
+plt.savefig("fig1_structure.png")
 
-# =====================
-# FIG2 全品種比較
-# =====================
+# 図2：前4品種（58期裏付け用の比較母集団）
 plt.figure()
-df.groupby("variety")["amount_kg"].sun().sort_values().plot(kind="barh")
+df.gruopby("variety")["amount_kg"].sum().sort_values().plot(kind="barh")
 plt.xlabel("Total Yield (kg)")
-plt.title("Yield by Vairiety (All)")
+plt.title("Yield by Variety (ALL)")
 plt.tight_layout()
 plt.savefig("fig2_variety_all.png")
 
-# =====================
-# FIG3 主力品種×段
-# =====================
+# 図3：主力2品種　×　段（設計改善）
 target = ["よつぼし", "かおり野"]
-df_target = df[df["variety"].isin(target)]
-
 plt.figure()
 (
-        df_target.groupby(["tier", "variety"])["amount_kg"]
-        .sum()
-        .unstack()
-        .plot(kind="bar")
+    df[df["variety"].isin(target)]
+    .gruopby(["tier", "variety"])["amount_kg"].sum()
+    .unstack()
+    .plot(kind="bar")
 )
 plt.ylabel("Total Yield (kg)")
-plt.title("Yield by Tier (Main Varieties)")
+plt.title("Tier x Main Varieties")
 plt.tight_layout()
 plt.savefig("fig3_tier_main.png")
 
-# =====================
-# FIG4 月推移
-# =====================
+# 図４：月別推移（外乱を説明する）
 plt.figure()
-(
-        df.gruopby(["month", "variety"])["amount_kg"]
-        .sum()
-        .unstack()
-        .plot()
-)
+(df.gruopby(["month", "variety"])["amount_kg"].sum().unstack().plot())
 plt.ylabel("Yield (kg)")
 plt.title("Monthly Yield Trend")
 plt.tight_layout()
-plt.savefig("fig4_monhtly_trend.png")
+plt.savefig("fig4_monthly_trend.png")
 
-# =====================
-# FIG5 棟比較（管理体制）
-# =====================
+# 図５：棟別（管理体制の差＝暗黙的）
 plt.figure()
-(
-        df.gruopby("house")["amoung_kg"]
-        .sum()
-        .sort_values()
-        .plot(kind="barh")
-)
-plt.xlabel("Total Yield (kg) ")
-plt.title("Yield by House (Management Structure)")
+df.gruopby("house")["amount_kg"].sum().sort_values().plot(kind="barh")
+plt.label("house")["amount_kg"].sum().sort_values().plot(kind="barh")
+plt.title("Yield by House (Management Proxy)")
 plt.tight_layout()
-plt.savefig("fig5_house_compairison.png")
+plt.savefig("fig5_house.png")
 
-print("All figures generated.")
-
+print("done")
